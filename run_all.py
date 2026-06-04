@@ -32,8 +32,17 @@ def main():
     import wind_shear
     import model
 
-    for name, mod in [("analysis", analysis), ("energy_yield", energy_yield),
-                      ("wind_shear", wind_shear), ("model", model)]:
+    steps = [("analysis", analysis), ("energy_yield", energy_yield),
+             ("wind_shear", wind_shear), ("model", model)]
+
+    # the source comparison only runs if the NASA snapshot is also around
+    import os
+    nasa_csv = os.path.join("data", "la_guajira_wind_nasa.csv")
+    if os.path.exists(nasa_csv):
+        import compare_sources
+        steps.append(("compare_sources", compare_sources))
+
+    for name, mod in steps:
         print(f"\n### {name} ###")
         mod.main()
 

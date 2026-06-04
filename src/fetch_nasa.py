@@ -20,7 +20,6 @@ Run:  python src/fetch_nasa.py
 
 import os
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
@@ -98,8 +97,12 @@ def to_pipeline_schema(df) -> pd.DataFrame:
 
 
 def compare_with_openmeteo(nasa):
-    """If the Open Meteo snapshot is around, print a quick side by side so the
-    two independent sources can be sanity checked against each other."""
+    """If the Open Meteo snapshot is around, print a quick text cross check so
+    the two independent sources can be sanity checked right after fetching.
+
+    the full side by side (figures and a stats table) lives in
+    compare_sources.py, this is just a sniff test.
+    """
     if not os.path.exists(config.DATA):
         return
     om = pd.read_csv(config.DATA, parse_dates=["timestamp"])
@@ -120,34 +123,7 @@ def compare_with_openmeteo(nasa):
     print(f"  mean speed Open Meteo  : {b.mean():.2f} m/s")
     print(f"  mean abs difference    : {np.mean(np.abs(a - b)):.2f} m/s")
     print(f"  correlation            : {np.corrcoef(a, b)[0, 1]:.3f}")
-
-    # a picture of the agreement: hourly scatter + monthly means
-    merged["month"] = merged["timestamp"].dt.to_period("M").dt.to_timestamp()
-    monthly = merged.groupby("month")[
-        ["wind_speed_100m_ms_nasa", "wind_speed_100m_ms_om"]].mean()
-
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
-    axes[0].scatter(b, a, s=3, alpha=0.08, color=config.ACCENT)
-    lims = [0, max(a.max(), b.max())]
-    axes[0].plot(lims, lims, color=config.HIGHLIGHT, lw=1.5, label="1:1")
-    axes[0].set_xlabel("Open Meteo / ERA5  [m/s]")
-    axes[0].set_ylabel("NASA POWER / MERRA-2  [m/s]")
-    axes[0].set_title("Hourly 100 m wind, two sources")
-    axes[0].legend()
-    axes[0].grid(alpha=0.3)
-
-    axes[1].plot(monthly.index, monthly["wind_speed_100m_ms_nasa"],
-                 marker="o", color=config.ACCENT, label="NASA POWER")
-    axes[1].plot(monthly.index, monthly["wind_speed_100m_ms_om"],
-                 marker="s", color=config.HIGHLIGHT, label="Open Meteo")
-    axes[1].set_ylabel("Monthly mean wind  [m/s]")
-    axes[1].set_title("Monthly means agree on the shape")
-    axes[1].legend()
-    axes[1].grid(alpha=0.3)
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    os.makedirs(config.RESULTS, exist_ok=True)
-    fig.savefig(os.path.join(config.RESULTS, "source_compare.png"), dpi=130)
+    print("  (run compare_sources.py for the full side by side)")
 
 
 def main():

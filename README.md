@@ -135,24 +135,37 @@ extrapolate up to the 100 m hub yourself (same physics as the wind shear
 section). POWER also gives the real surface pressure, so the air density does not
 have to be assumed.
 
-Putting the two sources side by side over the same 3 years:
+`src/compare_sources.py` runs a full side by side on the overlapping hours,
+computing everything the same way for both (same Weibull fit, same power curve,
+same air density) so the only thing that varies is the data:
 
 ```
-                        NASA POWER (MERRA-2)   Open Meteo (ERA5)
-mean wind speed 100 m   10.47 m/s              9.26 m/s
-hourly correlation      0.878
-mean abs difference     1.48 m/s
+metric                  Open Meteo (ERA5)   NASA POWER (MERRA-2)
+mean wind 100 m [m/s]                9.26                  10.47
+Weibull k [-]                        3.75                   4.29
+Weibull c [m/s]                     10.22                  11.48
+power density [W/m2]                   593                    820
+capacity factor [%]                  53.0                   66.2
+AEP per 2 MW [MWh/yr]               9,291                 11,596
+
+agreement (ERA5 minus MERRA-2):  bias -1.21 m/s,  MAE 1.48 m/s,
+                                 RMSE 1.86 m/s,  correlation 0.878
 ```
 
-![sources](results/source_compare.png)
+![sources](results/source_comparison.png)
 
-They track the same seasonal shape and correlate well, but NASA reads about
-1.5 m/s windier on average. that is not a small thing: pushed through the power
-curve it moves the estimated capacity factor from ~53% (ERA5) to ~66% (MERRA-2).
-the honest takeaway is that the headline number depends on which reanalysis you
+Six panels: distribution, hourly scatter, seasonal and diurnal cycle, the bias
+across the wind range, and the capacity factor. they correlate well (0.88) and
+share the same seasonal shape, but NASA reads about 1.2 m/s windier on average
+and the gap widens at the higher wind speeds. that is not a small thing: pushed
+through the power curve it moves the estimated capacity factor from ~53% (ERA5)
+to ~66% (MERRA-2), and the annual energy by about 2,300 MWh per turbine.
+
+The honest takeaway is that the headline number depends on which reanalysis you
 trust, and a real project would calibrate against an on site met mast before
-committing to either. reassuringly, the shear exponent the two give is basically
-the same (~0.14).
+committing to either. reassuringly, the diurnal and seasonal shapes agree and the
+shear exponent the two give is basically the same (~0.14), so the physics of the
+site is consistent even if the absolute level is not.
 
 ## Reproduce it
 
@@ -162,6 +175,7 @@ python run_all.py            # runs the whole pipeline on the cached data
 # or step by step:
 python src/fetch_data.py     # downloads data/la_guajira_wind.csv (Open Meteo)
 python src/fetch_nasa.py     # optional: same site from NASA POWER (MERRA-2)
+python src/compare_sources.py # side by side of the two sources
 python src/analysis.py       # resource assessment, Weibull, roses, extremes
 python src/wind_shear.py     # 10 m vs 100 m shear
 python src/energy_yield.py   # AEP, losses, turbine comparison
@@ -186,6 +200,7 @@ run_all.py            run the whole pipeline (add --fetch to redownload)
 src/config.py         shared constants, paths, air density helper
 src/fetch_data.py     download the hourly wind data (Open Meteo archive API)
 src/fetch_nasa.py     download the same site from NASA POWER (MERRA-2 satellite)
+src/compare_sources.py  side by side of the two sources (ERA5 vs MERRA-2)
 src/power_curve.py    generic turbine power curve (wind speed to MW)
 src/analysis.py       Weibull, patterns, wind/energy rose, seasonal, extremes
 src/wind_shear.py     shear exponent from 10 m and 100 m, hub height extrapolation
