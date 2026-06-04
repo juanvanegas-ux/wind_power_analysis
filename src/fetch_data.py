@@ -12,14 +12,16 @@ import os
 import pandas as pd
 import requests
 
-# La Guajira wind-resource area (near the Jepírachi / Guajira I wind farms).
-LATITUDE = 12.0
-LONGITUDE = -71.6
-START_DATE = "2021-01-01"
-END_DATE = "2023-12-31"
+import config
+
+# pulled from config so the site only lives in one place
+LATITUDE = config.LATITUDE
+LONGITUDE = config.LONGITUDE
+START_DATE = config.START_DATE
+END_DATE = config.END_DATE
 
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
-OUT = os.path.join(os.path.dirname(__file__), "..", "data", "la_guajira_wind.csv")
+OUT = config.DATA
 
 
 def fetch() -> pd.DataFrame:
