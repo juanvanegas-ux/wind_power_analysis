@@ -3,8 +3,9 @@
 End to end analysis of 3 years of hourly wind data (2021 to 2023) for La Guajira,
 the region with the best wind energy resource of Colombia. The project pulls real
 public data, characterizes the wind resource, works out the wind shear and the
-energy yield, and trains a wind power forecasting model. everything is
-reproducible from a single command.
+energy yield, sizes small wind turbines using the Cp curves from my companion
+[BEM solver](https://github.com/juanvanegas-ux/wind_turbine_bem), and trains a
+wind power forecasting model. everything is reproducible from a single command.
 
 Stack: Python, pandas, NumPy, SciPy, Matplotlib, requests. The data come from two
 free, independent public sources, [Open Meteo](https://open-meteo.com/) (ERA5
@@ -85,6 +86,90 @@ turbine                          net CF      net AEP [MWh/yr]
 
 The heatmap shows the capacity factor is high almost everywhere, with the dip in
 the calmer afternoons of the low season (Sep to Nov).
+
+## Small wind turbines (using the BEM blade Cp curves)
+
+This is where this repo shakes hands with the other one. my
+[wind turbine BEM toolkit](https://github.com/juanvanegas-ux/wind_turbine_bem)
+designs two small rotors (about 2.3 to 2.5 m radius, a few kW) and exports their
+power coefficient Cp as a function of tip speed ratio lambda. `src/small_wind.py`
+drops those exact curves onto the La Guajira wind to see what they would actually
+produce.
+
+Two things make this a small wind study and not the multi MW one above: the Cp
+comes from a real blade design instead of a generic curve, and small turbines sit
+on short towers, so the wind is taken at a 24 m hub (the 10 m measurement pushed
+up with the measured shear, not the 100 m level).
+
+Two control strategies are built from the same Cp curve, variable speed (the
+rotor tracks lambda_opt so Cp stays at its peak, then the generator caps the
+power) and fixed speed (constant rpm, so lambda slides along the curve and Cp
+falls off either side of the design point).
+
+![cp](results/swt_cp_curves.png)
+![power](results/swt_power_curves.png)
+
+```
+turbine          R [m]  Cp_max  lam_opt  rated kW  W/m2  CF gross  CF net  net AEP [MWh/yr]
+Smart blade      2.500   0.474     7.67      6.58   335    42.1%   38.8%        22.4
+Comercial blade  2.275   0.469     6.24      5.40   332    42.1%   38.8%        18.3
+```
+
+![compare](results/swt_compare.png)
+
+A word on that capacity factor, because being honest about it matters. the ETA
+in the model is the electromechanical conversion (shaft to AC out). gross CF is
+after that only, net CF knocks off a small loss stack on the same basis as the
+energy yield section (downtime, soiling, wiring), just without the wake bucket
+since a lone small turbine has no neighbours to steal from. even the ~39% net
+number is on the optimistic side for small wind, which in the real world runs
+lower because of turbulence near the ground, short towers and rougher siting. it
+looks this good because the rated wind (11 m/s) sits only 1.44x above the mean
+hub wind (7.63 m/s), a low rated/mean ratio, and because the La Guajira resource
+is doing the heavy lifting.
+
+Two clean takeaways. variable speed beats fixed speed by about 7 to 8% of annual
+energy, because the fixed speed rotor is spinning too fast for light wind (lambda
+too high, Cp low) and gives up the easy low wind energy. and the smart blade
+makes clearly more energy than the comercial one, it has a bigger swept area and
+a slightly higher peak Cp, which is the same conclusion the BEM study reached, now
+confirmed against a real wind resource.
+
+### Where the energy actually comes from
+
+Folding the power curve onto the wind distribution at hub height shows which
+winds pay the bills. the most common wind is around 8.5 m/s, but because energy
+goes with the cube of the speed the average kWh actually arrives at about 9.3
+m/s, right on the steep part of the curve just below rated. the light winds are
+common but worth little, the strong winds are valuable but rare.
+
+![energy distribution](results/swt_energy_distribution.png)
+
+### What a taller tower is worth
+
+Tower height is one of the cheapest knobs a small wind owner has, and the
+measured shear turns it into MWh. holding the generator nameplate fixed (the
+tower does not change the generator) and sweeping just the hub height, going from
+an 18 m to a 30 m tower lifts the smart blade AEP by about 18%. that is a real
+decision: more steel and a bigger crane against ~18% more energy every year for
+the life of the machine.
+
+![hub height](results/swt_hub_height.png)
+
+### Sizing the generator
+
+The blade is fixed but the generator behind it is a choice, and it is the classic
+small wind trade off. a small generator (low specific power, low rated wind)
+gives a gorgeous capacity factor but caps the energy early, a big one chases the
+peaks at the cost of running part loaded most of the time. sweeping the rated
+wind speed (the same as sweeping the specific power in W/m2) lays the trade off
+out, the baseline 335 W/m2 sits in the sensible middle, where the AEP curve is
+starting to flatten but the CF has not yet fallen off a cliff.
+
+![specific power](results/swt_specific_power.png)
+
+The hub height, efficiency, rated wind and cut out at the top of small_wind.py
+are easy to change for a different small machine.
 
 ## Forecasting the wind power
 
@@ -179,6 +264,7 @@ python src/compare_sources.py # side by side of the two sources
 python src/analysis.py       # resource assessment, Weibull, roses, extremes
 python src/wind_shear.py     # 10 m vs 100 m shear
 python src/energy_yield.py   # AEP, losses, turbine comparison
+python src/small_wind.py     # small turbines using the BEM Cp curves
 python src/model.py          # forecasting model and evaluation
 ```
 
@@ -205,6 +291,7 @@ src/power_curve.py    generic turbine power curve (wind speed to MW)
 src/analysis.py       Weibull, patterns, wind/energy rose, seasonal, extremes
 src/wind_shear.py     shear exponent from 10 m and 100 m, hub height extrapolation
 src/energy_yield.py   AEP with losses, capacity factor heatmap, turbine sizing
+src/small_wind.py     small wind turbines from the BEM Cp(lambda) curves
 src/model.py          ridge regression forecaster, skill vs horizon, error studies
 tests/                pytest unit tests
 data/                 cached dataset (CSV)
@@ -230,6 +317,10 @@ own:
   spreading turbines out
 * wake modelling (Jensen) for a small layout so the wake loss is computed not
   guessed
+* a rough LCOE for the small turbine, the AEP is half the equation, turbine and
+  tower cost are the other half and that is what actually decides the hub height
+* validate the small wind power curves against a real measured one (a Bergey or
+  similar) to see how far the BEM + generic losses sit from a certified machine
 * a tiny dashboard (streamlit) to scrub through the data interactively
 
 ## License
