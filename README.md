@@ -117,6 +117,13 @@ Comercial blade  2.275   0.469     6.24      5.40   332    42.1%   38.8%        
 
 ![compare](results/swt_compare.png)
 
+The two blades land on the exact same capacity factor, which looks like a typo
+but is not. with MPPT and the rated power defined as the MPPT power at a common
+rated wind, the blade factor (area times peak Cp) cancels out of CF, so capacity
+factor ends up fixed by the wind distribution and V_rated alone, not by the
+blade. the blades part ways on absolute energy (AEP), where that factor stays in,
+not on CF.
+
 A word on that capacity factor, because being honest about it matters. the ETA
 in the model is the electromechanical conversion (shaft to AC out). gross CF is
 after that only, net CF knocks off a small loss stack on the same basis as the
