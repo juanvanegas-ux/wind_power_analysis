@@ -6,8 +6,10 @@ public data, characterizes the wind resource, works out the wind shear and the
 energy yield, and trains a wind power forecasting model. everything is
 reproducible from a single command.
 
-Stack: Python, pandas, NumPy, SciPy, Matplotlib, requests. The data come from the
-free [Open Meteo](https://open-meteo.com/) historical archive.
+Stack: Python, pandas, NumPy, SciPy, Matplotlib, requests. The data come from two
+free, independent public sources, [Open Meteo](https://open-meteo.com/) (ERA5
+reanalysis) and [NASA POWER](https://power.larc.nasa.gov/) (MERRA-2, built from
+NASA satellite observations), which lets the resource numbers be cross checked.
 
 ## Key findings
 
@@ -119,6 +121,39 @@ A penalty sweep on a separate validation slice is included too (alpha_sweep.png)
 it barely moves the validation error, this problem is not really limited by
 overfitting, it is limited by how predictable the wind is.
 
+## Two data sources (NASA satellite vs ERA5)
+
+The main analysis runs on Open Meteo (ERA5), but the same site can be pulled from
+NASA POWER, which is built on the MERRA-2 reanalysis and assimilates NASA
+satellite observations. it is free and needs no key, and `src/fetch_nasa.py`
+downloads it and writes the exact same CSV columns so the rest of the pipeline
+runs on it unchanged.
+
+One wrinkle: NASA POWER reports wind at 10 m and 50 m, not at 100 m. that is
+actually handy, you measure the power law shear from the two heights and
+extrapolate up to the 100 m hub yourself (same physics as the wind shear
+section). POWER also gives the real surface pressure, so the air density does not
+have to be assumed.
+
+Putting the two sources side by side over the same 3 years:
+
+```
+                        NASA POWER (MERRA-2)   Open Meteo (ERA5)
+mean wind speed 100 m   10.47 m/s              9.26 m/s
+hourly correlation      0.878
+mean abs difference     1.48 m/s
+```
+
+![sources](results/source_compare.png)
+
+They track the same seasonal shape and correlate well, but NASA reads about
+1.5 m/s windier on average. that is not a small thing: pushed through the power
+curve it moves the estimated capacity factor from ~53% (ERA5) to ~66% (MERRA-2).
+the honest takeaway is that the headline number depends on which reanalysis you
+trust, and a real project would calibrate against an on site met mast before
+committing to either. reassuringly, the shear exponent the two give is basically
+the same (~0.14).
+
 ## Reproduce it
 
 ```bash
@@ -126,6 +161,7 @@ pip install -r requirements.txt
 python run_all.py            # runs the whole pipeline on the cached data
 # or step by step:
 python src/fetch_data.py     # downloads data/la_guajira_wind.csv (Open Meteo)
+python src/fetch_nasa.py     # optional: same site from NASA POWER (MERRA-2)
 python src/analysis.py       # resource assessment, Weibull, roses, extremes
 python src/wind_shear.py     # 10 m vs 100 m shear
 python src/energy_yield.py   # AEP, losses, turbine comparison
@@ -149,6 +185,7 @@ coordinates in src/config.py to study another site.
 run_all.py            run the whole pipeline (add --fetch to redownload)
 src/config.py         shared constants, paths, air density helper
 src/fetch_data.py     download the hourly wind data (Open Meteo archive API)
+src/fetch_nasa.py     download the same site from NASA POWER (MERRA-2 satellite)
 src/power_curve.py    generic turbine power curve (wind speed to MW)
 src/analysis.py       Weibull, patterns, wind/energy rose, seasonal, extremes
 src/wind_shear.py     shear exponent from 10 m and 100 m, hub height extrapolation
@@ -166,8 +203,8 @@ own:
 
 * pull a real measured power curve for a named turbine instead of the generic
   cubic one, the rated and cut out shape drives every energy number here
-* fetch station pressure (or use elevation) so the air density is not assumed at
-  sea level
+* use the NASA POWER surface pressure end to end for the air density instead of
+  the sea level assumption on the Open Meteo run (the data is already pulled)
 * a proper Weibull goodness of fit, the tails matter for the extreme value side
 * gust factor and turbulence intensity if i can get higher frequency data
 * try a gradient boosted model and an ARIMA as forecasting baselines, the linear
@@ -182,4 +219,5 @@ own:
 
 ## License
 
-MIT, see LICENSE. Weather data from Open Meteo (CC BY 4.0).
+MIT, see LICENSE. Weather data from Open Meteo (CC BY 4.0) and NASA POWER
+(freely available, please credit the NASA Langley POWER project).
