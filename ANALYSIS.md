@@ -507,6 +507,39 @@ afford, a grid seller at wholesale should not bother. (and the answer is sensiti
 to that $400/m guess, which is exactly why it is drawn as a decision curve and not
 quoted as a single payback year.)
 
+### econ_blade_choice.png, the end of the BEM to money pipeline
+
+![blade choice](results/econ_blade_choice.png)
+
+This is the figure the whole small wind half of the repo was building toward. it
+costs out the two BEM blades using *both* of their curves at once: the power curve
+Cp decides the energy (AEP), and the thrust curve Ct decides the tower and
+foundation cost, through the overturning moment from the loads section. so the
+capex (left panel) is split into a part that scales with rated power (rotor,
+drivetrain, generator) and a structural part that scales with the load. middle
+panel is the resulting LCOE per blade, right panel is the 20 year NPV behind the
+meter, the actual investment number.
+
+```
+blade            Ct/Cp   AEP kWh   capex     $/kW    LCOE $/kWh   20yr NPV @retail
+Smart blade      1.597    22,371   $32.9k   $5,000     0.173         +$12.4k
+Comercial blade  1.767    18,335   $27.7k   $5,133     0.177          +$9.5k
+```
+
+**Money:** earlier in the small wind section the two blades came out on the *same*
+capacity factor and, with a flat dollar per kW, the same LCOE. feeding the loads in
+breaks that tie, and the smart blade wins, on LCOE ($0.173 vs $0.177) and on
+lifetime NPV (+$12.4k vs +$9.5k). the reason is doubly rooted in the BEM run: the
+smart blade makes more energy (higher Cp, bigger rotor) and it carries less thrust
+per unit of power (lower Ct/Cp, the bend twist coupling doing its job), so its
+structure is cheaper per kW. and here is the honest robustness check, because both
+blades share the same capacity factor the LCOE comparison reduces to a comparison
+of dollars per kW, which is driven by the moment per kW, which is driven by Ct/Cp,
+a pure BEM number. so the *ranking* does not depend on the tower cost share i
+assumed (25%), only the *size* of the gap does. the rotor aerodynamics decide which
+blade is the better buy, which is a satisfying place for a BEM to economics
+pipeline to land.
+
 ---
 
 ## Part 6, two data sources

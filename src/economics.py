@@ -49,6 +49,7 @@ import numpy as np
 import config
 import energy_yield
 import small_wind
+import loads
 
 # --- finance -----------------------------------------------------------
 COP_PER_USD = 3600.0     # June 2026 market rate
@@ -76,6 +77,13 @@ OPEX_UTILITY_USD_KW_YR = 40.0
 CAPEX_SWT_USD_KW = 5000.0
 CAPEX_SWT_RANGE = (3000.0, 7000.0)
 OPEX_SWT_USD_KW_YR = 39.0    # NREL assumption
+
+# to tell the two BEM blades apart on cost (not just energy) the capex is split:
+# the tower + foundation scale with the rotor thrust load (the overturning moment
+# from loads.py, which comes from the BEM Ct curve), the rest scales with rated
+# power. tower+foundation is taken as ~25% of the baseline small wind capex, a
+# typical share. this is the seam that lets Ct, not just Cp, reach the money.
+STRUCT_FRACTION_BASELINE = 0.25
 
 # the softest assumption in the file: incremental tower cost per extra metre
 # of hub height for a ~6 kW machine. flagged loudly, and the tower figure is
@@ -145,6 +153,57 @@ def swt_machines():
         p = small_wind.power_mppt(v_hub, t["R"], cmax, rated_w)
         net_aep_kwh = p.mean() / 1000.0 * small_wind.HOURS_PER_YEAR * (1 - loss)
         out[name] = dict(rated_kw=rated_w / 1000.0, aep_kwh=net_aep_kwh)
+    return out
+
+
+def _moment_Nm(cp, t):
+    """Base overturning moment [N m] at rated for one blade, from the BEM Ct."""
+    lam = cp["lambda"].values
+    cmax, lopt = small_wind.cp_peak(cp, lam, t["col"])
+    ct_op = loads.ct_at(cp, lam, loads.ct_column(t["col"]), lopt)
+    f_rated = loads.thrust(small_wind.V_RATED, t["R"], ct_op)
+    return f_rated * small_wind.HUB_HEIGHT, ct_op, cmax
+
+
+def blade_full_costs(cp=None):
+    """The end of the BEM -> money pipeline: cost out each blade using *both* its
+    curves. energy (Cp) sets the AEP, thrust (Ct) sets the tower+foundation cost
+    through the overturning moment, so the two blades no longer come out on the
+    same LCOE.
+
+    capex is split into a part that scales with rated power (rotor, drivetrain,
+    generator, electronics, install) and a structural part that scales with the
+    moment. the split is calibrated so the smart blade hits the baseline
+    CAPEX_SWT_USD_KW, then applied to both blades on the same terms.
+    """
+    if cp is None:
+        cp = small_wind.load_cp()
+    swt = swt_machines()
+
+    # calibrate the unit costs off the smart blade
+    ref = small_wind.TURBINES["Smart blade"]
+    m_ref, _, _ = _moment_Nm(cp, ref)
+    rated_ref = swt["Smart blade"]["rated_kw"]
+    total_ref = CAPEX_SWT_USD_KW * rated_ref
+    struct_ref = STRUCT_FRACTION_BASELINE * total_ref
+    nonstruct_per_kw = (total_ref - struct_ref) / rated_ref     # USD/kW
+    struct_per_Nm = struct_ref / m_ref                          # USD per N m
+
+    out = {}
+    for name, t in small_wind.TURBINES.items():
+        m, ct_op, cmax = _moment_Nm(cp, t)
+        rated = swt[name]["rated_kw"]
+        aep = swt[name]["aep_kwh"]
+        struct = struct_per_Nm * m
+        nonstruct = nonstruct_per_kw * rated
+        total = struct + nonstruct
+        opex = OPEX_SWT_USD_KW_YR * rated
+        lcoe = (crf() * total + opex) / aep
+        npv = aep * RETAIL_USD_KWH * annuity_factor() \
+            - total - opex * annuity_factor()
+        out[name] = dict(rated_kw=rated, aep_kwh=aep, moment=m, ct_op=ct_op,
+                         ct_cp=ct_op / cmax, struct=struct, nonstruct=nonstruct,
+                         total=total, per_kw=total / rated, lcoe=lcoe, npv=npv)
     return out
 
 
@@ -256,6 +315,58 @@ def plot_tower_payback(swt):
     fig.savefig(os.path.join(config.RESULTS, "econ_tower_payback.png"), dpi=130)
 
 
+def plot_blade_choice(blades):
+    """The payoff of the whole BEM -> money pipeline: which blade is the better
+    buy once you cost out both its energy (Cp) and its structure (Ct)."""
+    names = list(blades.keys())
+    colors = [small_wind.TURBINES[n]["color"] for n in names]
+    x = np.arange(len(names))
+
+    fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.6))
+
+    # (1) capex split, rotor/drivetrain vs tower/foundation
+    nonstruct = [blades[n]["nonstruct"] / 1000 for n in names]
+    struct = [blades[n]["struct"] / 1000 for n in names]
+    axes[0].bar(x, nonstruct, color=config.ACCENT, label="rotor + drivetrain (per kW)")
+    axes[0].bar(x, struct, bottom=nonstruct, color=config.HIGHLIGHT,
+                label="tower + foundation (per moment)")
+    for xi, n in zip(x, names):
+        axes[0].text(xi, blades[n]["total"] / 1000 + 0.4,
+                     f"${blades[n]['total']/1000:.1f}k", ha="center", fontsize=8)
+    axes[0].set_xticks(x); axes[0].set_xticklabels(names, fontsize=8)
+    axes[0].set_ylabel("Installed capex  [k USD]")
+    axes[0].set_title("Capex, split by what drives it")
+    axes[0].legend(fontsize=8)
+    axes[0].grid(alpha=0.3, axis="y")
+
+    # (2) LCOE per blade (now they differ)
+    lc = [blades[n]["lcoe"] for n in names]
+    axes[1].bar(x, lc, color=colors)
+    axes[1].axhline(RETAIL_USD_KWH, color="grey", ls="--", lw=1.5,
+                    label=f"retail ${RETAIL_USD_KWH:.03f}")
+    for xi, v in zip(x, lc):
+        axes[1].text(xi, v + 0.003, f"${v:.03f}", ha="center", fontsize=8)
+    axes[1].set_xticks(x); axes[1].set_xticklabels(names, fontsize=8)
+    axes[1].set_ylabel("LCOE  [USD/kWh]")
+    axes[1].set_title("LCOE per blade (Cp + Ct)")
+    axes[1].legend(fontsize=8)
+    axes[1].grid(alpha=0.3, axis="y")
+
+    # (3) lifetime NPV behind the meter, the investment number
+    npv = [blades[n]["npv"] / 1000 for n in names]
+    axes[2].bar(x, npv, color=colors)
+    for xi, v in zip(x, npv):
+        axes[2].text(xi, v + 0.2, f"+${v:.1f}k", ha="center", fontsize=8)
+    axes[2].set_xticks(x); axes[2].set_xticklabels(names, fontsize=8)
+    axes[2].set_ylabel("20 yr NPV at retail  [k USD]")
+    axes[2].set_title("Which blade is the better buy")
+    axes[2].grid(alpha=0.3, axis="y")
+
+    fig.suptitle("BEM to money: costing each blade by its energy and its loads")
+    fig.tight_layout()
+    fig.savefig(os.path.join(config.RESULTS, "econ_blade_choice.png"), dpi=130)
+
+
 # --------------------------------------------------------------------------
 
 def summary(util, swt):
@@ -300,13 +411,33 @@ def summary(util, swt):
           " grid seller.")
 
 
+def blade_summary(blades):
+    print("\nBEM BLADE CHOICE (both curves: Cp -> energy, Ct -> structure cost):")
+    print(f"  {'blade':<18}{'Ct/Cp':>7}{'AEP kWh':>9}{'capex $':>10}"
+          f"{'$/kW':>8}{'LCOE':>8}{'NPV @retail':>13}")
+    for name, b in blades.items():
+        print(f"  {name:<18}{b['ct_cp']:>7.3f}{b['aep_kwh']:>9.0f}"
+              f"{b['total']:>10,.0f}{b['per_kw']:>8,.0f}{b['lcoe']:>8.3f}"
+              f"{b['npv']:>+13,.0f}")
+    s, c = blades["Smart blade"], blades["Comercial blade"]
+    print("-" * 78)
+    print(f"the smart blade wins on both: more energy AND a lower Ct/Cp, so its")
+    print(f"structure costs less per kW. LCOE {s['lcoe']:.3f} vs {c['lcoe']:.3f} "
+          f"$/kWh, lifetime NPV +${s['npv']/1000:.1f}k vs +${c['npv']/1000:.1f}k.")
+    print("the LCOE ordering is locked by the BEM Ct/Cp ratio (same CF), so it")
+    print("holds whatever the exact tower cost share is.")
+
+
 def main():
     os.makedirs(config.RESULTS, exist_ok=True)
     util = utility_machines()
     swt = swt_machines()
+    blades = blade_full_costs()
     summary(util, swt)
+    blade_summary(blades)
     plot_lcoe(util, swt)
     plot_tower_payback(swt)
+    plot_blade_choice(blades)
     print(f"Saved figures to {os.path.abspath(config.RESULTS)}")
 
 

@@ -40,3 +40,23 @@ def test_lcoe_only_depends_on_capacity_factor_not_size():
 
 def test_payback_infinite_when_revenue_negative():
     assert simple_payback_years(10000, -50) == float("inf")
+
+
+def test_blade_costs_smart_beats_comercial():
+    # the BEM -> money result: the smart blade has lower LCOE and higher NPV,
+    # locked by its lower Ct/Cp (cheaper structure per kW) plus more energy
+    from economics import blade_full_costs
+    b = blade_full_costs()
+    s, c = b["Smart blade"], b["Comercial blade"]
+    assert s["ct_cp"] < c["ct_cp"]          # smart sheds load (bend twist)
+    assert c["per_kw"] > s["per_kw"]        # so comercial costs more per kW
+    assert s["lcoe"] < c["lcoe"]            # lower LCOE
+    assert s["npv"] > c["npv"]              # better investment
+
+
+def test_blade_capex_split_adds_up():
+    from economics import blade_full_costs
+    b = blade_full_costs()
+    for name, x in b.items():
+        assert np.isclose(x["struct"] + x["nonstruct"], x["total"])
+        assert x["struct"] > 0 and x["nonstruct"] > 0

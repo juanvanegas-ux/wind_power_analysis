@@ -303,6 +303,33 @@ wholesale price it never is. same steel, opposite decision, and the only thing
 that changed is what the energy is worth. that is the whole point of separating the
 two prices.
 
+### Closing the BEM to money loop: which blade is the better buy
+
+This is the end of the pipeline that runs through the whole small wind side of the
+repo: the BEM rotor curves go in, money comes out. both BEM curves are used, the
+power curve Cp sets the energy (AEP), and the thrust curve Ct sets the tower and
+foundation cost through the overturning moment from the loads section. so the
+capex is split, a part that scales with rated power (rotor, drivetrain, generator)
+and a structural part that scales with the load.
+
+![blade choice](results/econ_blade_choice.png)
+
+Done this way the two blades no longer tie, they come apart on cost:
+
+```
+blade            Ct/Cp   AEP kWh   capex     $/kW    LCOE $/kWh   20yr NPV @retail
+Smart blade      1.597    22,371   $32.9k   $5,000     0.173         +$12.4k
+Comercial blade  1.767    18,335   $27.7k   $5,133     0.177          +$9.5k
+```
+
+The smart blade is the better investment, and for two reasons that both come
+straight from the BEM run: it makes more energy (higher Cp, bigger rotor) and it
+carries less load per unit of power (lower Ct/Cp, the bend twist coupling shedding
+thrust), so its structure costs less per kW. the LCOE ordering is actually locked
+by that Ct/Cp ratio, since both blades share the same capacity factor it does not
+depend on the exact tower cost share i assumed, only on the BEM numbers. that is
+the satisfying part, the rotor aerodynamics decide the investment ranking.
+
 For the full version of this, every figure in the repo explained with its money
 significance, see [ANALYSIS.md](ANALYSIS.md).
 
