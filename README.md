@@ -118,15 +118,16 @@ energy_yield.py assumption                          8.0%
 
 ![wake array](results/wake_array.png)
 
-Two honest takeaways. first, the 8% is optimistic for a compact array here, you
-get ~15% from a naive square grid and only reach 8% with generous spacing or a
-shallow layout. the reason is that this resource spends most of its hours below
-rated (mean 9.3 vs rated 12 m/s), and wakes only cost energy below rated. second,
-and this is the money point, the wind is so directional (right panel, the
-efficiency stays near 100% across the whole dominant ENE sector and only collapses
-for the rare winds blowing along the rows) that going wide and shallow cuts the
-loss from ~15% to ~9% for the *same turbines*. the wind rose is worth real money
-if you let it set the layout.
+Two honest takeaways. first, the 8% assumption holds up if you design the farm
+well, the wide and shallow layout (~9%) lines up with it, so the headline numbers
+earlier in this README stand. it is only a naively packed square grid that does
+materially worse (~15%), and you can see why in the spacing figure below, a
+compact grid is too dense at this site because the resource spends most of its
+hours below rated where wakes actually cost energy. second, and this is the money
+point, the wind is so directional (right panel, the efficiency stays near 100%
+across the whole dominant ENE sector and only collapses for the rare winds blowing
+along the rows) that going wide and shallow cuts the loss from ~15% to ~9% for the
+*same turbines*. the wind rose is worth real money if you let it set the layout.
 
 The spacing trade off (tighter packing is cheaper land and cable but more wake):
 

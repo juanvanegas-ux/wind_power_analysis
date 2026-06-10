@@ -29,12 +29,15 @@ turbines the computed loss swings from about 9% (wide and shallow) to about 15%
 (deep and narrow), purely from the shape of the layout. that swing is the wind
 rose turned into money.
 
-A heads up on the headline number: the assumed 8% turns out to be optimistic for a
-compact array here. a naive 4x4 square at 7D spacing computes to about 15%, and you
-only get down near 8% with generous spacing or the wide shallow layout. the reason
-is that this resource spends most of its hours *below* rated (mean 9.3 m/s against
-a 12 m/s rated), and wakes only cost you energy below rated, above rated the
-turbine is capped anyway. a site that ran mostly above rated would shrug wakes off.
+The headline reconciles nicely with the 8% energy_yield assumes: a sensibly
+designed wide and shallow farm computes to about 9%, right in line with the 8%, so
+the rest of the repo's numbers (capacity factor, AEP, LCOE) hold up. it is only a
+naively packed grid that does materially worse, a 4x4 square at 7D computes to
+about 15%. so the lesson is not that 8% is wrong, it is that 8% assumes you laid
+the farm out well, and at this site laying it out well means leaning into the one
+wind direction. (the losses are this sensitive because the resource spends most of
+its hours below rated, where wakes actually cost energy, above rated the turbine is
+capped anyway, so a site running mostly above rated would shrug wakes off.)
 
 Outputs (saved to ../results):
   - wake_recovery.png   how a single wake recovers with distance (a few Ct)
@@ -290,10 +293,10 @@ def summary(df):
           f": {loss_deep:>5.1%}")
     print(f"energy_yield.py assumption                         :  8.0%")
     print("-" * 72)
-    print("same 16 turbines, the layout alone moves the loss from ~9% to ~15%.")
-    print("the 8% rule of thumb is optimistic for a compact array, you reach it")
-    print("only by going wide and shallow or by spacing the rows out (see")
-    print("wake_spacing.png). leaning into the one wind direction is real money.")
+    print("the wide & shallow layout (~9%) lines up with the 8% assumption, so the")
+    print("headline numbers hold. same 16 turbines packed deep & narrow lose ~15%,")
+    print("so 8% assumes you lay the farm out well, which here means leaning into")
+    print("the one wind direction. that layout choice is real money.")
     return pos, deficit_by_direction(pos)
 
 

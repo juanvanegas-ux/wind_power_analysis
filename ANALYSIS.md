@@ -248,15 +248,18 @@ cheaper (less land, shorter cables) but loses more to wakes, and even at a gener
 10 diameters a compact square grid is still above the 8% that energy_yield.py
 assumed.
 
-**Money:** two honest conclusions. first, the 8% rule of thumb is optimistic for a
-dense layout at this site, the computed loss is more like 9 to 15% unless you space
-out or go shallow, the difference is a real chunk of revenue a rule of thumb would
-have hidden. second, this figure *is* the land versus energy trade, each extra
-diameter of spacing buys back some energy but costs more land and cable, and the
-right answer is wherever those two curves cross for the actual land and cable
-prices. one caveat to keep me honest, Jensen with a flat top hat wake tends to run
-a little pessimistic (real wakes mix out faster), so read the absolute numbers as
-conservative and trust the layout comparison more than the exact percent.
+**Money:** two honest conclusions. first, the 8% energy_yield.py assumed holds up
+*if the farm is laid out sensibly*, the wide and shallow layout came out ~9%, right
+in line with it, so the capacity factor, AEP and LCOE numbers built on that 8%
+elsewhere in this repo stand. it is the naive compact grid that does worse (~15%),
+so the takeaway is not that 8% is wrong, it is that 8% quietly assumes you did the
+layout well, which at this site means leaning into the one wind direction. second,
+this figure *is* the land versus energy trade, each extra diameter of spacing buys
+back some energy but costs more land and cable, and the right answer is wherever
+those two curves cross for the actual prices. one caveat to keep me honest, Jensen
+with a flat top hat wake tends to run a little pessimistic (real wakes mix out
+faster), so read the absolute numbers as conservative and trust the layout
+comparison more than the exact percent.
 
 ---
 
