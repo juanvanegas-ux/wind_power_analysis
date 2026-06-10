@@ -28,6 +28,11 @@ A capacity factor around 53% is exceptional, most onshore wind sites land around
 25 to 40%, and that is the reason La Guajira is the focus of the wind build out
 of Colombia.
 
+> **Want the deep version?** [ANALYSIS.md](ANALYSIS.md) walks through every single
+> figure one by one and explains what each one means for the money (LCOE, payback,
+> the value of a taller tower, the cost of source uncertainty). this README is the
+> overview, that is the full walkthrough.
+
 ## Resource assessment
 
 The wind speed distribution, the diurnal and seasonal patterns, and the wind
@@ -37,9 +42,9 @@ direction:
 ![patterns](results/patterns.png)
 ![rose](results/wind_rose.png)
 
-The wind is strong and remarkably steady (high Weibull k), it peaks at night and
-during the trade wind season (June to August), and it blows almost always from
-the east north east.
+The wind is strong and remarkably steady (high Weibull k), it peaks in the late
+morning (around 9 to 11 h) and during the trade wind season (roughly February
+and May to July here), and it blows almost always from the east north east.
 
 If you weight each direction by the energy it carries (the cube of the speed)
 instead of just counting hours, the rose gets even tighter on the ENE sector,
@@ -178,6 +183,47 @@ starting to flatten but the CF has not yet fallen off a cliff.
 The hub height, efficiency, rated wind and cut out at the top of small_wind.py
 are easy to change for a different small machine.
 
+## The economics (what the energy is actually worth)
+
+Energy in MWh is only half the story, the other half is money, so `src/economics.py`
+puts a price on it. the cost and price anchors are the one place this repo cannot
+just measure things, so instead of guessing i pulled the few external numbers and
+cited them in the file header (all June 2026): FX ~3,600 COP/USD, wholesale power
+~$0.076/kWh (XM bolsa), retail tariff ~$0.234/kWh (CREG), utility wind capex
+~$1,041/kW and LCOE $0.034/kWh (IRENA 2024), small wind capex $1,990 to $6,971/kW
+(NREL 2024).
+
+The key idea is that there are **two** prices, not one. a utility turbine sells
+into the grid at the wholesale price, a small turbine on someone's roof offsets the
+retail tariff they would otherwise pay, and the retail price is about 3x the
+wholesale one. that single distinction decides whether small wind makes sense.
+
+![lcoe](results/econ_lcoe.png)
+
+LCOE (the price each kWh must fetch to break even) lands the headline:
+
+* **utility wind here is firmly bankable**, all four turbine classes come in around
+  $0.04 to $0.07/kWh, below the ~$0.076 wholesale price, so a 2 MW machine clears
+  on the order of $240k/yr of gross margin
+* **small wind only works behind the meter**, its LCOE (~$0.17/kWh) is more than
+  double the wholesale price so it loses money as a grid seller, but it sits below
+  the retail tariff it can offset, so as self supply it roughly pays (payback ~7
+  years at retail, basically never at wholesale). the conclusion holds across the
+  whole NREL capex range, which is why it is drawn as a range not a single bar.
+
+The clearest illustration is whether a taller tower pays for itself. same tower,
+same extra energy from the hub height study, valued two ways:
+
+![tower payback](results/econ_tower_payback.png)
+
+Valued at the retail tariff a taller tower is always worth it, valued at the
+wholesale price it never is. same steel, opposite decision, and the only thing
+that changed is what the energy is worth. that is the whole point of separating the
+two prices.
+
+For the full version of this, every figure in the repo explained with its money
+significance, see [ANALYSIS.md](ANALYSIS.md).
+
 ## Forecasting the wind power
 
 A ridge regression written from scratch (NumPy only, closed form) with lagged
@@ -272,6 +318,7 @@ python src/analysis.py       # resource assessment, Weibull, roses, extremes
 python src/wind_shear.py     # 10 m vs 100 m shear
 python src/energy_yield.py   # AEP, losses, turbine comparison
 python src/small_wind.py     # small turbines using the BEM Cp curves
+python src/economics.py      # LCOE, payback, what the energy is worth
 python src/model.py          # forecasting model and evaluation
 ```
 
@@ -299,6 +346,7 @@ src/analysis.py       Weibull, patterns, wind/energy rose, seasonal, extremes
 src/wind_shear.py     shear exponent from 10 m and 100 m, hub height extrapolation
 src/energy_yield.py   AEP with losses, capacity factor heatmap, turbine sizing
 src/small_wind.py     small wind turbines from the BEM Cp(lambda) curves
+src/economics.py      LCOE, payback and tower value, sourced cost/price anchors
 src/model.py          ridge regression forecaster, skill vs horizon, error studies
 tests/                pytest unit tests
 data/                 cached dataset (CSV)
@@ -324,8 +372,9 @@ own:
   spreading turbines out
 * wake modelling (Jensen) for a small layout so the wake loss is computed not
   guessed
-* a rough LCOE for the small turbine, the AEP is half the equation, turbine and
-  tower cost are the other half and that is what actually decides the hub height
+* value the energy at real hourly prices instead of a flat one, the dry season /
+  daytime premium is the whole reason La Guajira wind is worth more than its raw
+  MWh suggest, the LCOE in economics.py only uses a flat price so far
 * validate the small wind power curves against a real measured one (a Bergey or
   similar) to see how far the BEM + generic losses sit from a certified machine
 * a tiny dashboard (streamlit) to scrub through the data interactively

@@ -31,11 +31,12 @@ def main():
     import energy_yield
     import wind_shear
     import small_wind
+    import economics
     import model
 
     steps = [("analysis", analysis), ("energy_yield", energy_yield),
              ("wind_shear", wind_shear), ("small_wind", small_wind),
-             ("model", model)]
+             ("economics", economics), ("model", model)]
 
     # the source comparison only runs if the NASA snapshot is also around
     import os
