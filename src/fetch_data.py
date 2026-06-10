@@ -1,8 +1,5 @@
-"""Download hourly wind data for La Guajira, Colombia, from the Open-Meteo
-historical archive (free, no API key) and save it as a CSV.
-
-La Guajira hosts Colombia's largest wind-energy resource. The dataset feeds the
-exploratory analysis and the wind-power forecasting model in this repo.
+"""Download hourly wind data for La Guajira from the Open Meteo historical
+archive (free, no API key) and save it as the CSV the rest of the repo runs on.
 
 Run:  python src/fetch_data.py
 """
@@ -25,6 +22,7 @@ OUT = config.DATA
 
 
 def fetch() -> pd.DataFrame:
+    """Pull the hourly series from the Open Meteo archive and rename the columns."""
     params = {
         "latitude": LATITUDE,
         "longitude": LONGITUDE,

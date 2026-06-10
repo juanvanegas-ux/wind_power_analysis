@@ -1,55 +1,13 @@
-"""Small wind turbine (SWT) analysis for La Guajira, using the Cp(lambda)
-curves from the companion BEM solver.
+"""Small wind turbines on the La Guajira resource, built from the Cp(lambda)
+curves of the companion BEM solver (the smart bend twist blade and the comercial
+one). wind is taken at a 24 m hub via the measured shear, and two control
+strategies are modelled: variable speed (MPPT, Cp held at its peak) and fixed
+rpm (lambda slides, Cp falls off). CF is reported gross and net (same loss basis
+as energy_yield, minus wake), and the net figure is still optimistic for real
+small wind.
 
-This ties the two projects together. the BEM repo
-(https://github.com/juanvanegas-ux/wind_turbine_bem) designs two ~2.3-2.5 m
-rotors for a small machine, a smart (bend twist coupled) blade and a comercial
-one, and spits out their power coefficient Cp as a function of tip speed ratio
-lambda. here those exact curves are dropped onto the La Guajira wind resource to
-see what they would actually make.
-
-Two things make this a SWT study and not the multi MW one in the rest of the
-repo:
-  * the rotors are tiny (a few kW), so Cp comes from the real blade design, not a
-    generic curve
-  * small turbines sit on short towers, so the wind is taken at ~24 m, not 100 m.
-    the 10 m measurement is pushed up to hub height with the measured shear.
-
-Two control strategies are modelled from the same Cp curve:
-  * variable speed (MPPT): the rotor tracks lambda_opt so Cp sits at its peak
-    across the whole productive range, then the generator caps the power. this is
-    what a modern small turbine does.
-  * fixed speed: the rotor spins at a constant rpm (the 250 rpm the BEM study
-    used), so lambda slides along the curve as the wind changes and Cp falls off
-    either side of the design point. this is the old school stall regulated way
-    and it shows why variable speed wins.
-
-On top of the headline numbers there are a few studies a small wind buyer
-actually cares about:
-  * where the energy comes from (the power curve folded onto the wind
-    distribution at hub height)
-  * how much the tower height is worth (AEP vs hub height, using the measured
-    shear, with the generator nameplate held fixed)
-  * how to size the generator (sweeping the rated wind speed, i.e. the specific
-    power in W/m2, and watching capacity factor trade against annual energy)
-
-A note on the capacity factor. ETA below is the electromechanical conversion
-(rotor shaft to AC out). on top of that a real machine loses energy to downtime,
-dirty blades and the wiring to the point of use, so the script reports both an
-idealized (gross) number and a net one on the same loss basis as energy_yield.py
-(minus the wake loss, since a single small turbine has no neighbours to steal
-from). even the net figure is optimistic for small wind, which in the field runs
-lower because of turbulence near the ground, short towers and rough siting. the
-La Guajira resource is doing the heavy lifting here.
-
-Outputs (saved to ../results):
-  - swt_cp_curves.png        the BEM Cp(lambda) curves
-  - swt_power_curves.png     derived power curves, both blades, both strategies
-  - swt_compare.png          capacity factor and annual energy
-  - swt_energy_distribution.png  where the annual energy actually comes from
-  - swt_hub_height.png       what a taller tower is worth
-  - swt_specific_power.png   sizing the generator (rated speed / specific power)
-
+Outputs (../results): swt_cp_curves, swt_power_curves, swt_compare,
+swt_energy_distribution, swt_hub_height, swt_specific_power.
 Run:  python src/small_wind.py
 """
 
@@ -286,9 +244,8 @@ def plot_compare(results):
 
 
 def plot_energy_distribution(cp, v_hub):
-    """Fold the power curve onto the wind distribution at hub height to show
-    where the annual energy actually comes from. the energy peak sits well
-    above the most common wind, because energy goes with v^3."""
+    """Fold the power curve onto the hub wind distribution to show where the
+    year's energy comes from (the energy peak sits above the modal wind)."""
     t = TURBINES["Smart blade"]
     lam = cp["lambda"].values
     cmax, _ = cp_peak(cp, lam, t["col"])
@@ -336,9 +293,7 @@ def plot_energy_distribution(cp, v_hub):
 
 
 def plot_hub_height(cp, df):
-    """What is a taller tower worth. sweep the hub height and recompute AEP,
-    holding the generator nameplate fixed (it does not change with the tower),
-    so only the wind distribution shifts up."""
+    """Net AEP vs hub height (nameplate held fixed, so only the wind shifts up)."""
     lam = cp["lambda"].values
     heights = np.arange(10, 41, 2.0)
     loss = net_loss_factor()
@@ -384,11 +339,8 @@ def plot_hub_height(cp, df):
 
 
 def plot_specific_power(cp, v_hub):
-    """Sizing the generator. sweep the rated wind speed, which is the same as
-    sweeping the specific power (rated W per m2 of rotor), and watch capacity
-    factor trade off against annual energy. a small generator (low specific
-    power) gives a gorgeous CF but caps the energy, a big one does the opposite.
-    """
+    """Sweep the rated wind speed (i.e. the specific power) and watch capacity
+    factor trade off against annual energy."""
     t = TURBINES["Smart blade"]
     lam = cp["lambda"].values
     cmax, _ = cp_peak(cp, lam, t["col"])

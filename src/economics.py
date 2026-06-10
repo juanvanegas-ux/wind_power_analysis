@@ -1,43 +1,22 @@
-"""The money side: what the energy is actually worth at La Guajira.
+"""The money side: LCOE, payback, and which blade to buy, pricing the energy the
+rest of the pipeline produced. every input here is an assumption (unlike the
+measured wind), so the external anchors are sourced below, not recalled.
 
-Every other script in this repo sticks to things you can measure from the wind
-data. economics is different, every input here is an *assumption*, so the rule
-is to source the few external numbers (not recall them), put them in one visible
-block, and let the result fall out. all the cost/price anchors below are dated
-June 2026 and cited in the comments.
-
-What it computes:
-  * LCOE (levelised cost of energy) for the small turbines (from small_wind.py)
-    and the utility machines (from energy_yield.py), on the same net AEP basis
-  * the two relevant electricity prices, because they are NOT the same number:
-      - utility scale wind is valued at the wholesale / contract price (it sells
-        into the grid)
-      - small distributed wind is valued at the avoided retail tariff (it offsets
-        what the owner would otherwise buy, behind the meter)
-  * whether a taller tower pays for itself, by putting a price on the extra AEP
-    the hub height sweep in small_wind.py already produced
-
-The honest headline it lands on: utility wind here is firmly below the wholesale
-price (very bankable), while small wind sits above wholesale and only makes sense
-behind the meter against the retail tariff, where this site's unusually high
-capacity factor drags it to roughly break even. that conclusion holds across the
-whole small wind capex range, which is why there is a sensitivity, not a single
-bar.
+Two prices, used on purpose: utility wind sells at the wholesale/contract price,
+small distributed wind offsets the retail tariff behind the meter (about 3x
+higher). headline: utility wind is firmly below wholesale (bankable), small wind
+only pays behind the meter, and the smart blade is the better buy.
 
 Sources (all June 2026):
-  * FX ~3,600 COP/USD                         (market rate, June 2026)
-  * wholesale/contract ~250-300 COP/kWh       (XM bolsa 2025 avg 246, contract
-                                               avg 299; 2026 ytd ~213)
+  * FX ~3,600 COP/USD                         (market rate)
+  * wholesale/contract ~250-300 COP/kWh       (XM bolsa 2025 avg 246, contract 299)
   * retail residential ~841 COP/kWh           (GlobalPetrolPrices / CREG, Sep 25)
   * utility onshore wind ~1,041 USD/kW,
     LCOE 0.034 USD/kWh                        (IRENA Renewable Power Gen Costs 2024)
   * distributed wind capex 1,990-6,971 USD/kW,
     opex 39 USD/kW/yr                         (NREL Cost of Wind Energy 2024 / ATB)
 
-Outputs (saved to ../results):
-  - econ_lcoe.png          LCOE of every machine against the price it can earn
-  - econ_tower_payback.png does a taller small wind tower pay for itself
-
+Outputs (../results): econ_lcoe, econ_tower_payback, econ_blade_choice.
 Run:  python src/economics.py
 """
 
@@ -93,24 +72,18 @@ TOWER_BASE_HEIGHT = 18.0     # the height we compare taller towers against
 
 
 def crf(rate=DISCOUNT_RATE, years=LIFE_YEARS):
-    """Capital recovery factor: turns an up front capex into a level annual
-    payment over the project life."""
+    """Capital recovery factor, an up front capex as a level annual payment."""
     return rate * (1 + rate) ** years / ((1 + rate) ** years - 1)
 
 
 def annuity_factor(rate=DISCOUNT_RATE, years=LIFE_YEARS):
-    """Present value of 1 per year for `years` years. it is just 1/crf, used to
-    discount a stream of annual energy savings back to today."""
+    """Present value of 1 per year over the life (just 1/crf)."""
     return (1 - (1 + rate) ** -years) / rate
 
 
 def lcoe_usd_per_kwh(capex_per_kw, rated_kw, opex_per_kw_yr, aep_kwh,
                      rate=DISCOUNT_RATE, years=LIFE_YEARS):
-    """Levelised cost of energy [USD/kWh].
-
-    LCOE = (annualised capex + annual opex) / annual energy. it is the price the
-    energy has to fetch, averaged over the life, for the project to break even.
-    """
+    """LCOE [USD/kWh] = (annualised capex + annual opex) / annual energy."""
     capex = capex_per_kw * rated_kw
     annual_cost = crf(rate, years) * capex + opex_per_kw_yr * rated_kw
     return annual_cost / aep_kwh
@@ -166,16 +139,8 @@ def _moment_Nm(cp, t):
 
 
 def blade_full_costs(cp=None):
-    """The end of the BEM -> money pipeline: cost out each blade using *both* its
-    curves. energy (Cp) sets the AEP, thrust (Ct) sets the tower+foundation cost
-    through the overturning moment, so the two blades no longer come out on the
-    same LCOE.
-
-    capex is split into a part that scales with rated power (rotor, drivetrain,
-    generator, electronics, install) and a structural part that scales with the
-    moment. the split is calibrated so the smart blade hits the baseline
-    CAPEX_SWT_USD_KW, then applied to both blades on the same terms.
-    """
+    """Cost out each blade from both BEM curves: Cp sets the AEP, Ct sets the
+    tower+foundation capex via the moment, so the two no longer tie on LCOE."""
     if cp is None:
         cp = small_wind.load_cp()
     swt = swt_machines()
@@ -269,10 +234,8 @@ def plot_lcoe(util, swt):
 
 
 def plot_tower_payback(swt):
-    """Does a taller tower pay? value the extra AEP the hub height sweep buys,
-    over the project life, against the extra steel. drawn at both the retail
-    and the wholesale price so you can see how much the answer depends on what
-    the energy is worth."""
+    """NPV of a taller tower (extra AEP over life minus extra steel), drawn at
+    both the retail and the wholesale price."""
     cp = small_wind.load_cp()
     lam = cp["lambda"].values
     df = small_wind.load_wind()

@@ -1,19 +1,9 @@
-"""Side by side comparison of the two wind data sources for La Guajira:
-Open Meteo (ERA5) and NASA POWER (MERRA-2 satellite).
+"""Side by side of the two data sources (Open Meteo / ERA5 and NASA POWER /
+MERRA-2) on the overlapping hours, everything computed the same way so the only
+thing that varies is the data. it shows how much the headline numbers depend on
+which reanalysis you trust.
 
-both describe the same 3 years at the same point, so any difference is the
-models disagreeing, not the weather. that disagreement is the whole point: it
-tells you how much the headline resource numbers depend on which dataset you
-picked, which is exactly the uncertainty a real project has to live with before
-a met mast goes up.
-
-To keep it a fair fight everything is computed the same way for both, same
-Weibull fit, same power curve, same air density, on the overlapping hours only.
-
-Outputs (saved to ../results):
-  - source_comparison.png   six panel side by side
-And prints a resource table for each source plus the agreement metrics.
-
+Outputs (../results): source_comparison.png (plus a printed table).
 Run:  python src/compare_sources.py
 """
 

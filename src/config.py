@@ -37,12 +37,7 @@ HIGHLIGHT = "#c0392b"
 
 
 def air_density_from_temp(temp_c, pressure_pa=SEA_LEVEL_PRESSURE):
-    """Air density [kg/m^3] from temperature [C] via the ideal gas law.
-
-    we dont have station pressure so sea level is assumed, which is fine
-    near the coast. density drops a little when it is hot, which matters
-    because power scales straight with density.
-    """
+    """Air density [kg/m^3] from temperature [C], ideal gas law, sea level pressure."""
     import numpy as np
 
     t_kelvin = np.asarray(temp_c, dtype=float) + 273.15

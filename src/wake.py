@@ -1,49 +1,13 @@
-"""Jensen (Park) wake model for a wind farm at La Guajira.
+"""Jensen (Park) wake model, computing the wake loss energy_yield.py only assumed
+(8%). it runs a turbine layout against the real measured wind (speed and
+direction) hour by hour, with the representative operating Ct ~0.8 from the BEM
+rotors. the loss is very layout dependent: a sensibly designed wide and shallow
+farm comes out ~9% (in line with the 8%), a naive compact grid ~15%, so 8% is
+really an assumption that you lay the farm out well, which here means leaning into
+the one dominant wind direction. Jensen with a flat top hat runs a bit
+pessimistic, so trust the layout comparison over the absolute percent.
 
-energy_yield.py knocks 8% off the energy for wakes (turbines stealing wind from
-each other), but that 8% was an assumption. this script computes it instead, from
-the geometry of a turbine layout, the thrust coefficient, and the actual measured
-wind (speed and direction) hour by hour.
-
-The Jensen model is the standard first cut. behind a turbine the wake expands
-linearly with distance and the wind speed deficit shrinks as it recovers:
-
-    deficit on the centreline at distance x:
-        delta0 = (1 - sqrt(1 - Ct)) * (R / (R + k*x))^2
-
-    R is the rotor radius, k is the wake decay rate (~0.075 onshore), Ct is the
-    thrust coefficient. a downstream rotor that only partly sits in the wake feels
-    delta0 scaled by the overlap area fraction, and several wakes hitting one
-    turbine combine as the square root of the sum of squares.
-
-Ct is the link back to the BEM work. the BEM rotors operate around Ct 0.76 to
-0.83 (see loads.py), and utility turbines sit in the same range below rated, so a
-representative Ct of 0.8 is used here, the wake physics is the same whatever the
-rotor size.
-
-The thing this makes obvious is *direction*. La Guajira wind is overwhelmingly
-from the east north east, so the layout should lean into that, build the farm wide
-and shallow (lots of turbines side by side across the wind, only a few rows deep
-along it) so that few turbines ever sit in another one's wake. for the same 16
-turbines the computed loss swings from about 9% (wide and shallow) to about 15%
-(deep and narrow), purely from the shape of the layout. that swing is the wind
-rose turned into money.
-
-The headline reconciles nicely with the 8% energy_yield assumes: a sensibly
-designed wide and shallow farm computes to about 9%, right in line with the 8%, so
-the rest of the repo's numbers (capacity factor, AEP, LCOE) hold up. it is only a
-naively packed grid that does materially worse, a 4x4 square at 7D computes to
-about 15%. so the lesson is not that 8% is wrong, it is that 8% assumes you laid
-the farm out well, and at this site laying it out well means leaning into the one
-wind direction. (the losses are this sensitive because the resource spends most of
-its hours below rated, where wakes actually cost energy, above rated the turbine is
-capped anyway, so a site running mostly above rated would shrug wakes off.)
-
-Outputs (saved to ../results):
-  - wake_recovery.png   how a single wake recovers with distance (a few Ct)
-  - wake_array.png      the layout, and array efficiency vs wind direction + rose
-  - wake_spacing.png    computed wake loss vs row spacing (the land vs wake trade)
-
+Outputs (../results): wake_recovery, wake_array, wake_spacing.
 Run:  python src/wake.py
 """
 
@@ -83,12 +47,8 @@ def _bearing_vector(deg):
 
 def layout(n_along=N_ALONG, n_across=N_ACROSS, s_along=S_ALONG,
            s_across=S_ACROSS, dominant_from=DOMINANT_FROM_DEG):
-    """Turbine positions [m] in east/north, grid aligned to the dominant wind.
-
-    the 'along' axis points the way the dominant wind blows (from + 180), the
-    'across' axis is perpendicular. so rows are stacked downwind and columns sit
-    side by side across the wind, which is the sensible orientation here.
-    """
+    """Turbine positions [m] in east/north, the grid aligned to the dominant
+    wind (rows stacked downwind, columns across it)."""
     along = _bearing_vector(dominant_from + 180.0)     # wind blows toward this
     across = _bearing_vector(dominant_from + 180.0 - 90.0)
     pos = []
@@ -148,16 +108,13 @@ def deficit_by_direction(pos, ct=CT_OP, k=K_WAKE):
 
 
 def array_efficiency_by_direction(deficit):
-    """Below rated, power goes with V^3, so the array efficiency at a direction is
-    the mean of (1 - deficit)^3 over the turbines. this is the clean direction
-    only view (it ignores that above rated wakes cost nothing)."""
+    """Direction only array efficiency, mean of (1 - deficit)^3 (below rated)."""
     return np.mean((1.0 - deficit) ** 3, axis=1)
 
 
 def computed_wake_loss(deficit, df):
-    """The honest number: run the real measured (speed, direction) record through
-    the layout and the actual power curve, and compare the array's energy to the
-    same turbines with no wakes. returns the wake loss fraction."""
+    """Wake loss fraction: the real (speed, direction) record through the layout
+    and power curve, array energy vs the same turbines with no wakes."""
     v = df["wind_speed_100m_ms"].values
     dirs = df["wind_direction_100m_deg"].values % 360
     bins = np.clip(np.round(dirs).astype(int), 0, 359)

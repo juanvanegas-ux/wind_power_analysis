@@ -1,17 +1,8 @@
-"""Exploratory wind resource analysis for La Guajira, Colombia.
+"""Exploratory wind resource analysis for La Guajira, and a printed resource
+summary (mean speed, Weibull, power density, rough power class, extreme wind).
 
-Produces (saved to ../results):
-  - weibull_fit.png       wind speed distribution + fitted Weibull
-  - patterns.png          diurnal and monthly wind speed patterns
-  - wind_rose.png         directional frequency of the wind
-  - seasonal_weibull.png  how the Weibull k and c move through the year
-  - energy_rose.png       direction weighted by energy, not just by frequency
-  - extreme_gust.png      Gumbel fit to the daily maxima for return wind speeds
-
-And prints a resource summary (mean speed, Weibull params, power density both
-hardcoded and from the measured temperature, a rough wind power class, and a
-50 year extreme wind estimate).
-
+Outputs (../results): weibull_fit, patterns, wind_rose, energy_rose,
+seasonal_weibull, extreme_gust.
 Run:  python src/analysis.py
 """
 
@@ -110,12 +101,8 @@ def wind_rose(df):
 
 
 def energy_rose(df):
-    """Same directions, but weight each hour by v^3 instead of counting hours.
-
-    a calm breeze from the south and a howling gale from the east count the
-    same on a normal wind rose, which hides where the energy actually comes
-    from. weighting by the cube fixes that.
-    """
+    """Wind rose weighted by v^3 instead of by hours, so it shows where the
+    energy comes from, not just where the wind is most frequent."""
     sub = df.dropna(subset=["wind_direction_100m_deg", "wind_speed_100m_ms"])
     dirs = sub["wind_direction_100m_deg"].values
     energy = sub["wind_speed_100m_ms"].values ** 3
@@ -142,9 +129,8 @@ def energy_rose(df):
 
 
 def seasonal_weibull(df):
-    """Fit a Weibull per month and show how the shape k and scale c drift
-    through the year. the trade wind season should stand out as a fatter c
-    and a tighter (higher k) distribution."""
+    """Fit a Weibull per month to show how the shape k and scale c drift through
+    the year."""
     ks, cs, months = [], [], []
     for m in range(1, 13):
         v = df.loc[df["month"] == m, "wind_speed_100m_ms"].values
@@ -172,13 +158,8 @@ def seasonal_weibull(df):
 
 
 def extreme_value(df):
-    """Gumbel fit to the daily maximum wind speed, used to read off the wind
-    speed you would expect once every N years.
-
-    block maxima method: take the strongest hour of each day as one sample,
-    fit a Gumbel, then invert it for the 1, 10 and 50 year return levels. this
-    is the kind of number that drives the turbine class survival load.
-    """
+    """Gumbel fit to the daily maxima, inverted for the 1/5/10/50 year return
+    wind speeds (the survival load that sets the turbine class)."""
     daily_max = df.groupby("date")["wind_speed_100m_ms"].max().values
     loc, scale = stats.gumbel_r.fit(daily_max)
 
@@ -209,12 +190,8 @@ def extreme_value(df):
 
 
 def power_class(power_density):
-    """Very rough NREL style wind power class from the power density.
-
-    the official classes are defined at 50 m and we are at 100 m, so treat
-    this as a label not a certificate. anything past ~600 W/m2 is about as
-    good as onshore wind gets.
-    """
+    """Rough NREL style wind power class from the power density (a label, not a
+    certificate, the official classes are defined at 50 m)."""
     edges = [100, 150, 200, 250, 300, 400, 1000]
     for i, e in enumerate(edges, start=1):
         if power_density < e:

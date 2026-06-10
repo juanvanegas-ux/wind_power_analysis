@@ -1,38 +1,10 @@
-"""Rotor thrust and tower loads for the small turbines, using the *thrust*
-coefficient Ct(lambda) from the BEM solver.
+"""Rotor thrust and tower loads from the BEM thrust coefficient Ct(lambda), the
+curve small_wind.py left unused. thrust is F = 0.5 rho A Ct V^2 and times the hub
+height it gives the base overturning moment the foundation is sized around. the
+payoff is that the bend twist smart blade sits at a lower Ct/Cp, so it carries
+less load per unit of power than the comercial one.
 
-small_wind.py used the power coefficient Cp to work out energy. but the same BEM
-run also exports the thrust coefficient Ct, which had been sitting unused, and Ct
-is what sizes the structure, the tower and the foundation have to carry the
-aerodynamic push on the rotor, not the power. so this script turns the Ct curves
-into actual forces and moments.
-
-The thrust on the rotor is
-
-    F = 0.5 * rho * A * Ct * V^2
-
-(note V^2, not V^3 like power). multiply that by the hub height and you get the
-overturning moment at the tower base, which is the number a foundation is
-designed around.
-
-The interesting result, and the reason this is worth doing, is what it says about
-the two blades. the smart blade is bend twist coupled, the whole point of that
-design is that the blade twists under load to shed thrust. and you can see it in
-the numbers: at its operating point the smart blade sits at a *lower* Ct than the
-comercial one, so it carries less structural load per unit of power it makes
-(a lower Ct/Cp ratio). it wins on loads and on energy at the same time, which is
-exactly the case the BEM study was trying to make, now in force and moment terms.
-
-Two control strategies again, matching small_wind.py:
-  * variable speed (MPPT): the rotor sits at lambda_opt, so Ct is roughly constant
-    at Ct(lambda_opt) and thrust grows with V^2 until the machine furls at rated
-    and sheds load
-  * fixed speed: lambda slides with the wind, so Ct slides along its curve too
-
-Outputs (saved to ../results):
-  - swt_thrust_curves.png  rotor thrust vs wind, both blades, both strategies
-  - swt_tower_loads.png    base overturning moment vs hub height (cost of height)
-
+Outputs (../results): swt_thrust_curves, swt_tower_loads.
 Run:  python src/loads.py
 """
 
@@ -61,10 +33,7 @@ def thrust(V, R, ct, rho=config.AIR_DENSITY):
 
 
 def thrust_mppt(V, R, ct_op, rho=config.AIR_DENSITY):
-    """Variable speed thrust [N]. the rotor holds lambda_opt so Ct is constant,
-    thrust grows as V^2 up to the rated wind, then the turbine furls / regulates
-    and we cap the thrust at its rated value (a standard simplification, real
-    furling can even pull it down a bit)."""
+    """Variable speed thrust [N]: Ct constant, capped at the rated value (furl)."""
     V = np.asarray(V, dtype=float)
     f = thrust(V, R, ct_op, rho)
     f_rated = thrust(sw.V_RATED, R, ct_op, rho)
@@ -88,8 +57,7 @@ def thrust_fixed(V, R, cp, lam, ct_col, rpm=sw.FIXED_RPM, rho=config.AIR_DENSITY
 
 
 def overturning_moment(thrust_n, hub_height):
-    """Base overturning moment [N m] = thrust * hub height. the load the
-    foundation is designed to resist."""
+    """Base overturning moment [N m] = thrust * hub height (the foundation load)."""
     return thrust_n * hub_height
 
 
@@ -151,10 +119,8 @@ def plot_thrust_curves(cp):
 
 
 def plot_tower_loads(cp):
-    """Base overturning moment vs hub height. the thrust at rated is fixed by the
-    rotor, but the moment is thrust times height, so it grows straight line with
-    the tower, this is the structural cost that sits against the energy gain of a
-    taller tower in small_wind.py."""
+    """Base overturning moment vs hub height (grows linearly, the structural cost
+    of a taller tower)."""
     lam = cp["lambda"].values
     heights = np.arange(10, 41, 2.0)
     fig, ax = plt.subplots(figsize=(8, 4.8))

@@ -1,19 +1,7 @@
-"""Download hourly wind data for La Guajira from NASA POWER instead of Open
-Meteo, as a second, independent source.
-
-NASA POWER (Prediction Of Worldwide Energy Resources) serves meteorology
-derived from the MERRA-2 reanalysis, which assimilates NASA satellite
-observations. it is free and needs no API key, same as Open Meteo, but it comes
-from a different model so it is a genuine cross check on the resource numbers.
-
-One catch: POWER gives wind at 10 m and 50 m, not at 100 m. that is fine here,
-because with two heights you can measure the power law shear exponent and push
-the wind up to the 100 m hub height yourself (the same physics as wind_shear.py).
-POWER also gives the real surface pressure, so the air density does not have to
-be assumed at sea level.
-
-The output CSV uses the exact same columns as the Open Meteo file, so the rest
-of the pipeline (analysis, energy_yield, model) runs on it unchanged.
+"""Download the same site from NASA POWER (MERRA-2 satellite reanalysis) as a
+second, independent source. POWER reports wind at 10 m and 50 m, so the 100 m
+hub wind is extrapolated with the measured shear, and the output CSV matches the
+Open Meteo columns so the rest of the pipeline runs on it unchanged.
 
 Run:  python src/fetch_nasa.py
 """
@@ -37,6 +25,7 @@ H_MID = 50.0
 
 
 def fetch() -> pd.DataFrame:
+    """Pull the hourly series from NASA POWER and put it on local time."""
     params = {
         "parameters": "WS10M,WS50M,WD10M,T2M,PS",
         "community": "RE",                 # renewable energy community
@@ -97,12 +86,8 @@ def to_pipeline_schema(df) -> pd.DataFrame:
 
 
 def compare_with_openmeteo(nasa):
-    """If the Open Meteo snapshot is around, print a quick text cross check so
-    the two independent sources can be sanity checked right after fetching.
-
-    the full side by side (figures and a stats table) lives in
-    compare_sources.py, this is just a sniff test.
-    """
+    """Quick text cross check against the Open Meteo snapshot if it is around
+    (the full side by side is in compare_sources.py)."""
     if not os.path.exists(config.DATA):
         return
     om = pd.read_csv(config.DATA, parse_dates=["timestamp"])

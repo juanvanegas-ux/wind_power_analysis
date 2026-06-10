@@ -1,26 +1,10 @@
-"""Forecast wind power several hours ahead for La Guajira from historical
-weather.
+"""Forecast wind power a few hours ahead with a from scratch ridge regression
+(closed form, NumPy only) and physics informed features (power ~ wind^3). scored
+against persistence on a chronological hold out (train 2021-2022, test 2023),
+with side studies on skill vs horizon, the ridge penalty, and error by wind speed.
 
-The model is a from scratch ridge regression (closed form, NumPy only) with
-physics informed features: because turbine power scales with the cube of wind
-speed, polynomial terms of the wind speed let a linear model capture the
-strongly non linear power response. it is compared against a naive persistence
-baseline and a plain linear model on a chronological hold out (train 2021-2022,
-test 2023).
-
-On top of the single horizon run this script also looks at:
-  - how the forecast skill decays as you push the horizon further out
-  - how the ridge penalty alpha trades bias against variance
-  - where the error actually sits across the wind speed range
-
-Outputs (saved to ../results):
-  - forecast_timeseries.png   actual vs predicted over a test window
-  - feature_importance.png    standardized coefficient magnitudes
-  - actual_vs_pred.png        hold out scatter
-  - skill_vs_horizon.png      MAE and skill score vs forecast horizon
-  - alpha_sweep.png           validation error vs the ridge penalty
-  - error_by_regime.png       error binned by wind speed
-
+Outputs (../results): forecast_timeseries, feature_importance, actual_vs_pred,
+skill_vs_horizon, alpha_sweep, error_by_regime.
 Run:  python src/model.py
 """
 
@@ -114,12 +98,7 @@ def mae_of(y_true, y_pred):
 # --------------------------------------------------------------------------
 
 def skill_vs_horizon(df_raw, horizons=(1, 2, 3, 6, 12, 24), alpha=1.0):
-    """Refit the model at each horizon and track how it beats persistence.
-
-    skill score = 1 - MAE_model / MAE_persistence. positive means the learned
-    model helps, and it should grow with the horizon because persistence falls
-    apart the further out you go.
-    """
+    """Refit at each horizon and track the skill over persistence (1 - MAE ratio)."""
     pers_mae, model_mae, skill = [], [], []
     for h in horizons:
         df, _, physics_cols = build_features(df_raw.copy(), horizon=h)
@@ -160,11 +139,8 @@ def skill_vs_horizon(df_raw, horizons=(1, 2, 3, 6, 12, 24), alpha=1.0):
 
 
 def alpha_sweep(train, physics_cols, alphas=None):
-    """Sweep the ridge penalty on a chronological validation split.
-
-    the last 20% of the training years is held out as validation so the
-    penalty is picked without ever touching the 2023 test set.
-    """
+    """Sweep the ridge penalty on the last 20% of the train years (never touches
+    the 2023 test set)."""
     if alphas is None:
         alphas = np.logspace(-2, 3, 18)
 
@@ -197,9 +173,8 @@ def alpha_sweep(train, physics_cols, alphas=None):
 
 
 def error_by_regime(test, y_test, pred):
-    """Where does the error live? bin the test set by the current wind speed
-    and look at the MAE in each bin. the steep part of the power curve is
-    where small wind errors blow up into big power errors."""
+    """MAE binned by wind speed, to show the error concentrates on the steep
+    part of the power curve."""
     wind = test["wind_speed_100m_ms"].values
     edges = np.arange(0, 22, 2.0)
     centers = 0.5 * (edges[:-1] + edges[1:])

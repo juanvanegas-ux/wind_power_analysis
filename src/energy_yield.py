@@ -1,23 +1,7 @@
-"""Energy yield for La Guajira: how much electricity a turbine would actually
-make here over a year, and how that changes with losses and with the turbine
-you pick.
+"""Energy yield for La Guajira: AEP (mean power times 8760), gross vs net of the
+loss stack, and how it moves across a few turbine classes.
 
-The resource summary in analysis.py gives a capacity factor, but a developer
-cares about energy in MWh/year, gross vs net once you subtract the real world
-losses (wakes between turbines, downtime, electrical losses), and which turbine
-class fits the site best. that is what this script does.
-
-AEP (annual energy production) is just the average power times the hours in a
-year
-
-    AEP = mean_power_MW * 8760
-
-and the net number knocks off a loss factor on top of that.
-
-Outputs (saved to ../results):
-  - cf_heatmap.png       capacity factor by month and hour of day
-  - turbine_compare.png  AEP and capacity factor for a few turbine classes
-
+Outputs (../results): cf_heatmap.png, turbine_compare.png
 Run:  python src/energy_yield.py
 """
 
@@ -45,11 +29,7 @@ LOSSES = {
 
 
 def total_loss_factor(losses=LOSSES):
-    """Combine the individual losses multiplicatively, not by adding them.
-
-    losses stack on what is left after the previous one, so 8% then 3% is
-    not 11%, it is 1 - 0.92*0.97.
-    """
+    """Combine the losses multiplicatively (8% then 3% is 1 - 0.92*0.97, not 11%)."""
     keep = 1.0
     for f in losses.values():
         keep *= (1.0 - f)

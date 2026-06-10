@@ -1,26 +1,7 @@
-"""Wind shear between 10 m and 100 m for La Guajira.
+"""Wind shear between 10 m and 100 m, measured from the two wind speed columns
+rather than assumed. fits the power law exponent alpha at every hour.
 
-The dataset has wind speed at two heights and the first version of this repo
-only ever used the 100 m one. that felt like a waste, the 10 m column lets you
-measure the wind shear directly instead of guessing it.
-
-The power law model is
-
-    V(z) = V_ref * (z / z_ref) ** alpha
-
-and with two heights you can just solve for the exponent alpha at every hour
-
-    alpha = ln(V_high / V_low) / ln(z_high / z_low)
-
-alpha tells you how fast the wind speeds up as you go higher. a small alpha
-(~0.1) is a smooth surface like the open sea, a big one (~0.3 or more) means a
-rough surface or a very stable night time boundary layer. it is the number you
-need to push a measurement up to hub height, and it usually swings a lot between
-day and night.
-
-Outputs (saved to ../results):
-  - wind_shear.png   alpha distribution + how it changes through the day
-
+Outputs (../results): wind_shear.png
 Run:  python src/wind_shear.py
 """
 
@@ -34,11 +15,7 @@ import config
 
 
 def shear_exponent(v_low, v_high, z_low=config.HEIGHT_LOW, z_high=config.HEIGHT_HIGH):
-    """Power law exponent alpha from two wind speeds at two heights.
-
-    array safe. hours where either speed is basically calm are dropped to
-    nan because the log ratio gets noisy and meaningless down there.
-    """
+    """Power law exponent alpha from two speeds at two heights (calm hours -> nan)."""
     v_low = np.asarray(v_low, dtype=float)
     v_high = np.asarray(v_high, dtype=float)
     good = (v_low > 0.5) & (v_high > 0.5)
@@ -48,11 +25,12 @@ def shear_exponent(v_low, v_high, z_low=config.HEIGHT_LOW, z_high=config.HEIGHT_
 
 
 def extrapolate(v_ref, alpha, z_ref, z_target):
-    """Push a wind speed from z_ref up (or down) to z_target with the power law."""
+    """Move a wind speed from z_ref to z_target with the power law."""
     return np.asarray(v_ref, dtype=float) * (z_target / z_ref) ** alpha
 
 
 def load() -> pd.DataFrame:
+    """Load the data, drop calm hours, and add the per hour alpha."""
     df = pd.read_csv(config.DATA, parse_dates=["timestamp"])
     df = df.dropna(subset=["wind_speed_10m_ms", "wind_speed_100m_ms"])
     df = df.reset_index(drop=True)
@@ -63,9 +41,8 @@ def load() -> pd.DataFrame:
 
 
 def check_extrapolation(df):
-    """Sanity check: go from 10 m up to 100 m with the median alpha and see
-    how close we land to the real measured 100 m wind. if the power law was
-    useless this error would be large."""
+    """Extrapolate 10 m -> 100 m with the median alpha and score it against the
+    measured 100 m wind."""
     a_med = np.nanmedian(df["alpha"].values)
     pred_100 = extrapolate(df["wind_speed_10m_ms"].values, a_med,
                            config.HEIGHT_LOW, config.HEIGHT_HIGH)
@@ -77,6 +54,7 @@ def check_extrapolation(df):
 
 
 def plot(df):
+    """Plot the alpha distribution and its diurnal swing."""
     alpha = df["alpha"].dropna().values
     by_hour = df.groupby("hour")["alpha"].median()
 
@@ -105,6 +83,7 @@ def plot(df):
 
 
 def summary(df):
+    """Print the shear stats and the extrapolation error."""
     alpha = df["alpha"].dropna().values
     a_med, mae, bias = check_extrapolation(df)
 

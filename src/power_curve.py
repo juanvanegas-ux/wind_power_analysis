@@ -1,9 +1,6 @@
-"""A simple, generic wind-turbine power curve used to convert wind speed into
-electrical power for the resource assessment and the forecasting target.
-
-Parameters loosely match a multi-MW onshore turbine; the shape (cut-in, cubic
-ramp, rated plateau, cut-out) is what matters for the analysis.
-"""
+"""A simple generic turbine power curve (cut in, cubic ramp, rated plateau, cut
+out) for the resource assessment and the forecasting target. parameters loosely
+match a multi MW onshore machine, the shape is what matters."""
 
 import numpy as np
 
@@ -14,7 +11,7 @@ RATED_POWER = 2.0  # MW
 
 
 def power_output(wind_speed):
-    """Electrical power [MW] for a given wind speed [m/s] (array-safe)."""
+    """Electrical power [MW] for a given wind speed [m/s] (array safe)."""
     v = np.asarray(wind_speed, dtype=float)
     p = np.zeros_like(v)
 
