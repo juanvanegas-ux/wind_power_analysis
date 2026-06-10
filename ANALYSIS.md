@@ -54,7 +54,7 @@ study would test the goodness of fit (it is on the roadmap).
 
 **Money:** energy goes with the cube of wind speed, so the difference between a
 7 m/s site and a 9.3 m/s site is not 30% more energy, it is roughly
-(9.3/7)^3 ≈ 2.3x more energy from the same turbine. that ratio is the whole
+(9.3/7)^3, about 2.3x more energy from the same turbine. that ratio is the whole
 business case. the steadiness (high k) matters too, a steady wind means the
 turbine runs near its sweet spot more of the time, which lifts the capacity factor
 and therefore the revenue per dollar of turbine.
@@ -65,10 +65,9 @@ and therefore the revenue per dollar of turbine.
 
 Left, the average wind by hour of day. it dips before dawn (around 8.9 m/s), then
 climbs to a clear peak in the late morning, 9 to 11 h, near 10 m/s, and stays
-healthy all afternoon and evening. (the README used to say it peaks at night,
-that was wrong, the data says late morning, fixed.) right, the average by month,
-windiest in the first half of the year with a peak around July, calmest in the low
-season of September to November (October bottoms out near 6.2 m/s).
+healthy all afternoon and evening. right, the average by month, windiest in the
+first half of the year with a peak around July, calmest in the low season of
+September to November (October bottoms out near 6.2 m/s).
 
 **Money:** the *timing* of generation is worth money, not just the total. two
 points. first, the daytime peak lines up reasonably with daytime demand, which is
@@ -452,8 +451,8 @@ opex) / annual energy.
 
 Left, the utility machines, valued against the wholesale price. all four classes
 come in between about $0.039 and $0.068/kWh, *all of them below* the wholesale
-price line (about $0.076/kWh), and in the same neighbourhood as the IEC... sorry,
-the IRENA 2024 global benchmark (the grey dashed line, $0.034). the high capacity
+price line (about $0.076/kWh), and in the same neighbourhood as the IRENA 2024
+global benchmark (the grey dashed line, $0.034). the high capacity
 factor 1.5 MW machine is the cheapest, because for a fixed $/kW the machine that
 runs at the highest capacity factor spreads its capex over the most kWh (caveat,
 real $/kW is not perfectly equal across classes, the bigger rotor per kW costs a

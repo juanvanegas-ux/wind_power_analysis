@@ -1,11 +1,14 @@
 # Wind Power Analysis, La Guajira (Colombia)
 
 End to end analysis of 3 years of hourly wind data (2021 to 2023) for La Guajira,
-the region with the best wind energy resource of Colombia. The project pulls real
-public data, characterizes the wind resource, works out the wind shear and the
-energy yield, sizes small wind turbines using the Cp curves from my companion
-[BEM solver](https://github.com/juanvanegas-ux/wind_turbine_bem), and trains a
-wind power forecasting model. everything is reproducible from a single command.
+the region with the best wind energy resource of Colombia. it pulls real public
+data, characterizes the wind resource, measures the wind shear, works out the
+energy yield, computes the wake losses for a farm layout, and then runs the small
+wind side all the way from the rotor to the money: the Cp and Ct curves of my
+companion [BEM solver](https://github.com/juanvanegas-ux/wind_turbine_bem) feed
+the energy and the structural loads, which feed an LCOE and an answer to which
+blade is the better buy. it also trains a wind power forecasting model. everything
+is reproducible from a single command.
 
 Stack: Python, pandas, NumPy, SciPy, Matplotlib, requests. The data come from two
 free, independent public sources, [Open Meteo](https://open-meteo.com/) (ERA5
@@ -20,7 +23,7 @@ mean wind speed (100 m)          : 9.26 m/s
 Weibull shape k / scale c        : 3.75 / 10.22 m/s
 mean wind power density          : 591 W/m2  (rough class 7 of 7)
 median shear exponent (10->100m) : 0.145  (basically the 1/7 law)
-estimated capacity factor (2 MW) : about 53%
+estimated capacity factor (2 MW) : about 53% gross (45% net of losses)
 50 year extreme wind (Gumbel)    : about 36 m/s
 ```
 
