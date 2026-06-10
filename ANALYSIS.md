@@ -325,6 +325,60 @@ either one, you want to minimise cost per kWh, and that optimum is somewhere in
 the middle of this curve. it depends on whether the generator or the rotor
 dominates your cost, which is a real number a manufacturer would plug in here.
 
+### swt_thrust_curves.png, the load the structure has to carry
+
+![thrust](results/swt_thrust_curves.png)
+
+Everything up to here used the power coefficient Cp. this uses the *other* curve
+the BEM solver exports, the thrust coefficient Ct, which had been sitting unused.
+thrust is the aerodynamic push on the rotor, F = 0.5 rho A Ct V squared (note the
+square, not the cube like power), and it is what the tower and foundation actually
+have to hold up. solid lines are variable speed (the rotor holds its operating
+point so Ct is roughly constant and thrust grows with V squared until the machine
+furls at rated and caps the load), dashed are fixed speed.
+
+**Money:** thrust is structural cost. a higher thrust means a beefier tower, a
+bigger foundation, more steel and concrete, and that is a real chunk of a small
+turbine's installed price. two things to read off here. first, the fixed speed
+lines (dashed) keep climbing past rated while the variable speed ones cap, a
+stalling fixed rotor does not shed load the way a furling variable speed one does,
+so it sees the highest peak thrust of all, that is another cost on top of the
+energy it already gave up. second, and more interesting, is the blade comparison
+in the next number.
+
+The operating point comparison is the real result:
+
+```
+blade            Cp_op  Ct_op  Ct/Cp   F at rated   base moment @24m
+Smart blade      0.474  0.758  1.597     1.06 kN        25.5 kN m
+Comercial blade  0.469  0.830  1.767     0.96 kN        23.1 kN m
+```
+
+The smart blade is bend twist coupled, the whole design idea is that the blade
+twists under load to shed thrust. and it works, it operates at a lower Ct/Cp than
+the comercial blade, meaning it carries about 11% less thrust for each unit of
+power it makes. so it wins on energy (more AEP) and on loads (less thrust per kW)
+at the same time, which is exactly the case the BEM study set out to make, now
+expressed in forces a structural engineer would recognise.
+
+### swt_tower_loads.png, the structural cost of a taller tower
+
+![tower loads](results/swt_tower_loads.png)
+
+The base overturning moment (thrust times hub height) against tower height. the
+thrust at rated is fixed by the rotor, so the moment just grows in a straight line
+as the tower gets taller.
+
+**Money:** this is the missing half of the taller tower decision. back in the hub
+height energy figure the energy gain *flattened off* with height (diminishing
+returns, each extra metre adds less wind). here the structural load *keeps
+climbing linearly*. concave benefit against linear cost is the textbook recipe for
+an interior optimum, it is the real reason you do not build the tower infinitely
+tall even when the energy is valuable, eventually the foundation cost of the next
+metre outruns the energy it buys. the economics tower payback figure prices the
+energy side, this prices the load side, and together they bracket the sensible
+height.
+
 ---
 
 ## Part 5, the economics (the heart of the money story)

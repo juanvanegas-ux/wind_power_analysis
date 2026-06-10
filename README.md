@@ -180,6 +180,43 @@ starting to flatten but the CF has not yet fallen off a cliff.
 
 ![specific power](results/swt_specific_power.png)
 
+### Rotor thrust and tower loads (the other BEM curve)
+
+Everything above used the power coefficient Cp. but the BEM run also exports the
+*thrust* coefficient Ct, and that is the one that sizes the structure, the tower
+and foundation carry the aerodynamic push on the rotor (F = 0.5 rho A Ct V^2), not
+the power. `src/loads.py` turns the Ct curves into forces and the base overturning
+moment (thrust times hub height).
+
+![thrust](results/swt_thrust_curves.png)
+
+The headline falls out of comparing the two blades at their operating points:
+
+```
+blade            Cp_op  Ct_op  Ct/Cp   F at rated   base moment @24m
+Smart blade      0.474  0.758  1.597     1.06 kN        25.5 kN m
+Comercial blade  0.469  0.830  1.767     0.96 kN        23.1 kN m
+```
+
+The smart blade is bend twist coupled, it twists under load to shed thrust, and
+the numbers show it working: it sits at a lower Ct/Cp, so it carries about 11%
+less thrust per unit of power than the comercial blade. it wins on loads *and* on
+energy, which is exactly the case the BEM study was making, now in force terms.
+(fixed speed also shows up worse here, the dashed lines keep climbing past rated
+because a stalling fixed rotor does not shed load the way a furling variable speed
+one does, so it sees the highest peak thrust of all.)
+
+The tower load also reframes the taller tower question. the thrust at rated is set
+by the rotor, but the base moment is thrust times height, so it grows in a
+straight line with the tower:
+
+![tower loads](results/swt_tower_loads.png)
+
+That is the structural cost that sits against the energy gain. the energy from a
+taller tower flattens off (diminishing returns), the foundation moment keeps
+climbing linearly, which is the real reason you do not just build the tower
+infinitely tall even when the energy is valuable.
+
 The hub height, efficiency, rated wind and cut out at the top of small_wind.py
 are easy to change for a different small machine.
 
@@ -318,6 +355,7 @@ python src/analysis.py       # resource assessment, Weibull, roses, extremes
 python src/wind_shear.py     # 10 m vs 100 m shear
 python src/energy_yield.py   # AEP, losses, turbine comparison
 python src/small_wind.py     # small turbines using the BEM Cp curves
+python src/loads.py          # rotor thrust and tower loads from the BEM Ct curves
 python src/economics.py      # LCOE, payback, what the energy is worth
 python src/model.py          # forecasting model and evaluation
 ```
@@ -346,6 +384,7 @@ src/analysis.py       Weibull, patterns, wind/energy rose, seasonal, extremes
 src/wind_shear.py     shear exponent from 10 m and 100 m, hub height extrapolation
 src/energy_yield.py   AEP with losses, capacity factor heatmap, turbine sizing
 src/small_wind.py     small wind turbines from the BEM Cp(lambda) curves
+src/loads.py          rotor thrust and tower loads from the BEM Ct(lambda) curves
 src/economics.py      LCOE, payback and tower value, sourced cost/price anchors
 src/model.py          ridge regression forecaster, skill vs horizon, error studies
 tests/                pytest unit tests
