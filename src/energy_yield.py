@@ -32,7 +32,10 @@ import config
 HOURS_PER_YEAR = 8760.0
 
 # typical wind farm loss buckets. these are industry rule of thumb numbers,
-# a real bankable study would measure each one on site.
+# a real bankable study would measure each one on site. note: wake.py actually
+# computes the wake number from a layout and the measured wind (Jensen model),
+# and finds 8% is optimistic for a compact array here (~9% wide/shallow, ~15%
+# for a square grid). the flat 8% is kept here as the labelled assumption.
 LOSSES = {
     "wake": 0.08,          # turbines stealing wind from each other
     "availability": 0.03,  # downtime for maintenance and faults

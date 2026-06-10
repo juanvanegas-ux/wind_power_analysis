@@ -205,6 +205,59 @@ less. the shape of this heatmap is, in plain terms, well matched to when the gri
 will pay you well, which lifts the *value* of each MWh above what a flat price
 assumption would suggest.
 
+### wake_recovery.png, how much one turbine steals from the next
+
+![wake recovery](results/wake_recovery.png)
+
+The energy yield above took 8% off for wakes as a rule of thumb. these next three
+figures actually compute it (Jensen wake model). this first one is the physics, the
+speed deficit on the centreline of a single wake against downstream distance, for a
+few thrust coefficients (Ct ~0.8 is where both the BEM rotors and utility turbines
+operate below rated). the recovery is slow, even 7 rotor diameters back the wind is
+still about 13% down.
+
+**Money:** a 13% slower wind is roughly a 35% weaker turbine (power goes with the
+cube), so a turbine sitting in a wake is a turbine you half paid for and only
+half use. that is what wake loss costs, and why row spacing (which is land and
+cable, i.e. money) is a real design lever, not a detail.
+
+### wake_array.png, the layout and the direction story
+
+![wake array](results/wake_array.png)
+
+Left, a 16 turbine farm laid out wide and shallow (only two rows deep along the
+wind, eight across it) with the dominant wind arrow. right, the array efficiency as
+the wind direction changes, with the wind rose (hours per direction) shaded behind
+it. the efficiency stays near 100% right across the dominant east north east sector
+where essentially all the hours are, and only collapses for the rare winds that
+blow along the rows.
+
+**Money:** this is the whole point of caring about direction. because the wind is so
+one directional, you can orient the farm so the turbines almost never shadow each
+other during the hours that actually matter. running the real measured wind through
+the layout, the same 16 turbines lose about 9% wide and shallow versus about 15%
+as a deep narrow block, that 6 point swing is free, it costs nothing but choosing
+the orientation the rose was already telling you to choose.
+
+### wake_spacing.png, the spacing trade off, and the honest number
+
+![wake spacing](results/wake_spacing.png)
+
+Computed wake loss for a 4x4 grid as the downwind row spacing opens up. tighter is
+cheaper (less land, shorter cables) but loses more to wakes, and even at a generous
+10 diameters a compact square grid is still above the 8% that energy_yield.py
+assumed.
+
+**Money:** two honest conclusions. first, the 8% rule of thumb is optimistic for a
+dense layout at this site, the computed loss is more like 9 to 15% unless you space
+out or go shallow, the difference is a real chunk of revenue a rule of thumb would
+have hidden. second, this figure *is* the land versus energy trade, each extra
+diameter of spacing buys back some energy but costs more land and cable, and the
+right answer is wherever those two curves cross for the actual land and cable
+prices. one caveat to keep me honest, Jensen with a flat top hat wake tends to run
+a little pessimistic (real wakes mix out faster), so read the absolute numbers as
+conservative and trust the layout comparison more than the exact percent.
+
 ---
 
 ## Part 4, small wind turbines (the BEM blades)

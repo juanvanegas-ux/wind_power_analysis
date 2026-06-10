@@ -92,6 +92,50 @@ turbine                          net CF      net AEP [MWh/yr]
 The heatmap shows the capacity factor is high almost everywhere, with the dip in
 the calmer afternoons of the low season (Sep to Nov).
 
+## Wake losses (computing the 8%, not guessing it)
+
+The energy yield above knocks 8% off for wakes (turbines stealing wind from each
+other), but that was a rule of thumb. `src/wake.py` actually computes it with a
+Jensen (Park) wake model, from a turbine layout, the thrust coefficient (the same
+Ct ~0.8 the BEM rotors run at, see the loads section, and typical for utility
+turbines below rated), and the real measured wind speed *and direction* hour by
+hour.
+
+![wake recovery](results/wake_recovery.png)
+
+A single wake recovers slowly, even 7 rotor diameters downstream there is still a
+~13% speed deficit on the centreline, and a 13% slower wind is a ~35% weaker
+turbine. so spacing and layout matter a lot. running the actual wind record
+through a 16 turbine farm:
+
+```
+layout (same 16 x 2 MW turbines)            computed wake loss
+wide & shallow (2 deep x 8 across)                 9.3%
+square         (4 x 4)                             14.8%
+deep & narrow  (8 deep x 2 across)                 14.9%
+energy_yield.py assumption                          8.0%
+```
+
+![wake array](results/wake_array.png)
+
+Two honest takeaways. first, the 8% is optimistic for a compact array here, you
+get ~15% from a naive square grid and only reach 8% with generous spacing or a
+shallow layout. the reason is that this resource spends most of its hours below
+rated (mean 9.3 vs rated 12 m/s), and wakes only cost energy below rated. second,
+and this is the money point, the wind is so directional (right panel, the
+efficiency stays near 100% across the whole dominant ENE sector and only collapses
+for the rare winds blowing along the rows) that going wide and shallow cuts the
+loss from ~15% to ~9% for the *same turbines*. the wind rose is worth real money
+if you let it set the layout.
+
+The spacing trade off (tighter packing is cheaper land and cable but more wake):
+
+![wake spacing](results/wake_spacing.png)
+
+Caveat: Jensen with a flat top hat wake is a simple first cut and tends to run a
+little pessimistic versus reality (real wakes recover faster), so treat the
+absolute numbers as conservative, the layout *comparison* is the robust part.
+
 ## Small wind turbines (using the BEM blade Cp curves)
 
 This is where this repo shakes hands with the other one. my
@@ -356,6 +400,7 @@ python src/wind_shear.py     # 10 m vs 100 m shear
 python src/energy_yield.py   # AEP, losses, turbine comparison
 python src/small_wind.py     # small turbines using the BEM Cp curves
 python src/loads.py          # rotor thrust and tower loads from the BEM Ct curves
+python src/wake.py           # Jensen wake model, computed wake loss vs layout
 python src/economics.py      # LCOE, payback, what the energy is worth
 python src/model.py          # forecasting model and evaluation
 ```
@@ -385,6 +430,7 @@ src/wind_shear.py     shear exponent from 10 m and 100 m, hub height extrapolati
 src/energy_yield.py   AEP with losses, capacity factor heatmap, turbine sizing
 src/small_wind.py     small wind turbines from the BEM Cp(lambda) curves
 src/loads.py          rotor thrust and tower loads from the BEM Ct(lambda) curves
+src/wake.py           Jensen wake model, wake loss from layout + measured wind
 src/economics.py      LCOE, payback and tower value, sourced cost/price anchors
 src/model.py          ridge regression forecaster, skill vs horizon, error studies
 tests/                pytest unit tests
@@ -409,8 +455,10 @@ own:
   grid operator actually wants
 * spatial analysis across several grid points to see the smoothing you get from
   spreading turbines out
-* wake modelling (Jensen) for a small layout so the wake loss is computed not
-  guessed
+* feed the computed wake loss (wake.py) back into energy_yield instead of the
+  flat 8%, and try a better wake model (Gaussian / turbulence dependent k) since
+  Jensen runs a bit pessimistic
+* optimise the turbine positions (not just a grid) against the measured rose
 * value the energy at real hourly prices instead of a flat one, the dry season /
   daytime premium is the whole reason La Guajira wind is worth more than its raw
   MWh suggest, the LCOE in economics.py only uses a flat price so far
